@@ -7,6 +7,8 @@ import GraficoLinhaPecas from '../components/GraficoLinhaPecas.jsx'
 import GraficoBarrasPecas from '../components/GraficoBarrasPecas.jsx'
 import GraficoNivelReservatorio from '../components/GraficoNivelReservatorio.jsx'
 import ListaAlertas from '../components/ListaAlertas.jsx'
+import PainelAnomalias from '../components/PainelAnomalias.jsx'
+import { detectarAnomalias } from '../services/regrasAnomalias.js'
 import {
   buscarEsteiras,
   buscarContagem,
@@ -108,6 +110,7 @@ function Dashboard() {
     historico.length > 0 ? historico[historico.length - 1].registradoEm : null
   const limiteAtencao = nivel?.limiteAtencaoPercentual ?? esteira.limiteAtencaoPercentual
   const limiteCritico = nivel?.limiteCriticoPercentual ?? esteira.limiteCriticoPercentual
+  const anomalias = detectarAnomalias({ contagem, historico })
 
   return (
     <>
@@ -120,11 +123,12 @@ function Dashboard() {
 
       {erro && (
         <div className="alert alert-warning" role="alert">
-          {erro} Exibindo os últimos dados recebidos.
+          {erro} Exibindo os últimos dados recebidos. 
         </div>
       )}
 
       <AlertaReservatorio nivelAtual={nivel} />
+      <PainelAnomalias anomalias={anomalias} />
 
       <div className="row g-3 mb-3">
         <div className="col-12 col-sm-6 col-lg">

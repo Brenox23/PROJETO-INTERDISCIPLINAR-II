@@ -1,8 +1,166 @@
-body {
-  background-color: #f0f2f5;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ===== Cores e medidas (mude aqui para trocar o visual todo) ===== */
+:root {
+  --mt-fundo: #eef1f5;
+  --mt-texto: #1f2a37;
+  --mt-texto-suave: #6b7280;
+  --mt-escuro: #111827;
+  --mt-escuro-2: #1f2a37;
+  --mt-destaque: #f59e0b;
+  --mt-raio: 14px;
+  --mt-sombra: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.06);
+  --mt-sombra-hover: 0 4px 8px rgba(16, 24, 40, 0.08), 0 12px 24px rgba(16, 24, 40, 0.1);
 }
 
-.cabecalho-metaltech {
-  background-color: #1f2a37;
-  color: #ffffff;
+/* ===== Base ===== */
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--mt-fundo);
+  color: var(--mt-texto);
 }
+
+/* ===== Cabeçalho ===== */
+.cabecalho-metaltech {
+  background: linear-gradient(135deg, var(--mt-escuro) 0%, var(--mt-escuro-2) 100%);
+  color: #ffffff;
+  border-bottom: 4px solid var(--mt-destaque);
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.18);
+}
+
+.cabecalho-metaltech h1 {
+  font-size: clamp(1.1rem, 4vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.cabecalho-metaltech h1::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 1.1em;
+  margin-right: 0.6rem;
+  vertical-align: -0.15em;
+  border-radius: 3px;
+  background: var(--mt-destaque);
+}
+
+/* ===== Cartões ===== */
+.card {
+  border: 0;
+  border-radius: var(--mt-raio) !important;
+  box-shadow: var(--mt-sombra) !important;
+  background: #ffffff;
+}
+
+/* Cartões de indicador (têm faixa colorida na esquerda) */
+.card.border-start {
+  border-left-width: 6px !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card.border-start:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mt-sombra-hover) !important;
+}
+
+.card .text-uppercase {
+  font-size: 0.72rem !important;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: var(--mt-texto-suave) !important;
+}
+
+.card h2.mb-0 {
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.card h2.mb-0 span {
+  font-size: 1.1rem !important;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+/* Ícone dentro de uma caixinha */
+.card .fs-1 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  font-size: 1.7rem !important;
+  border-radius: 12px;
+  background: #f3f4f6;
+}
+
+/* ===== Barra de status ===== */
+.bg-white.rounded {
+  border-radius: var(--mt-raio) !important;
+  border-left: 6px solid var(--mt-destaque);
+  box-shadow: var(--mt-sombra) !important;
+}
+
+/* ===== Etiquetas ===== */
+.badge {
+  padding: 0.5em 0.9em;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ===== Alertas ===== */
+.alert {
+  border: 0;
+  border-left: 6px solid;
+  border-radius: var(--mt-raio);
+  box-shadow: var(--mt-sombra);
+}
+
+.alert-success {
+  background: #ecfdf3;
+  color: #14532d;
+  border-left-color: #16a34a;
+}
+
+.alert-warning {
+  background: #fffbeb;
+  color: #78350f;
+  border-left-color: #f59e0b;
+}
+
+.alert-danger {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border-left-color: #dc2626;
+  animation: pulsar-alerta 2s ease-in-out infinite;
+}
+
+.alert-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border-left-color: #9ca3af;
+}
+
+@keyframes pulsar-alerta {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-danger { animation: none; }
+  .card.border-start { transition: none; }
+}
+
+/* ===== Listas ===== */
+.list-group-item {
+  background: transparent;
+}
+
+/* ===== Celular ===== */
+@media (max-width: 575.98px) {
+  .card h2.mb-0 { font-size: 1.7rem; }
+  .card .fs-1 { width: 46px; height: 46px; font-size: 1.4rem !important; }
+} 
