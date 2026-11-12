@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MetalTech RA</title>
+
+    <!-- A-Frame primeiro, depois o MindAR -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <link rel="stylesheet" href="css/estilos.css" />
+  </head>
+
+  <body>
+    <div id="status" class="procurando">Aponte a câmera para o marcador</div>
+
+    <a-scene
+      mindar-image="imageTargetSrc: ./assets/targets/targets.mind;"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- Tudo o que está aqui dentro aparece sobre o marcador -->
+      <a-entity id="alvo-esteira" mindar-image-target="targetIndex: 0">
+        <a-plane color="#f59e0b" opacity="0.9" position="0 0 0.01" width="1" height="0.4"></a-plane>
+        <a-text
+          value="Esteira detectada!"
+          align="center"
+          color="#111827"
+          width="2"
+          position="0 0 0.02"
+        ></a-text>
+      </a-entity>
+    </a-scene>
+
+    <script src="js/app.js" defer></script>
+  </body>
+</html>
