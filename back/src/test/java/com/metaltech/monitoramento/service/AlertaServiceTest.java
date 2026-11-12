@@ -115,4 +115,17 @@ class AlertaServiceTest {
         assertTrue(alerta.isResolvido());
         assertThrows(IllegalStateException.class, () -> alertaService.resolver(1L));
     }
+
+    @Test
+    @DisplayName("Nível voltando ao normal deve resolver automaticamente os alertas de nível abertos")
+    void nivelNormalResolveAlertasAbertos() {
+        Alerta alertaAberto = new Alerta(esteira, null, NivelAlerta.CRITICO, "Reservatório cheio");
+        when(alertaRepository.buscarAlertasDeNivelAbertos(any())).thenReturn(java.util.List.of(alertaAberto));
+
+        LeituraNivel leituraNormal = new LeituraNivel(esteira, null, 28.0); // ~6,7%
+        Optional<Alerta> resultado = alertaService.avaliarEGerar(leituraNormal);
+
+        assertTrue(resultado.isEmpty());
+        assertTrue(alertaAberto.isResolvido());
+    }
 }

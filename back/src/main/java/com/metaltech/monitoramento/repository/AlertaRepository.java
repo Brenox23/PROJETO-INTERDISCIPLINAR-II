@@ -37,4 +37,18 @@ public interface AlertaRepository extends JpaRepository<Alerta, Long> {
             """)
     boolean existeAlertaDeNivelAberto(@Param("esteiraId") Long esteiraId,
                                       @Param("nivel") NivelAlerta nivel);
+
+    /**
+     * Alertas de nível do reservatório ainda abertos em uma esteira.
+     * Usado para resolvê-los automaticamente quando o nível volta ao normal.
+     */
+    @Query("""
+            select a
+            from Alerta a
+            join a.leitura l
+            where a.esteira.id = :esteiraId
+              and a.resolvido = false
+              and type(l) = LeituraNivel
+            """)
+    List<Alerta> buscarAlertasDeNivelAbertos(@Param("esteiraId") Long esteiraId);
 }
