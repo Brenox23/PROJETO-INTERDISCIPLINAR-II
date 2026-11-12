@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marcar sensores no marcador</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #f3f4f6; color: #111827; }
+      h1 { font-size: 1.3rem; }
+      #area { position: relative; display: inline-block; margin: 12px 0; cursor: crosshair; line-height: 0; }
+      #imagem { display: block; max-width: 100%; max-height: 75vh; }
+      .pino {
+        position: absolute; transform: translate(-50%, -50%);
+        width: 26px; height: 26px; border-radius: 50%; line-height: 1;
+        background: #f59e0b; border: 2px solid #fff; color: #111827;
+        font-weight: 700; font-size: 13px; pointer-events: none;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      }
+      .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #fff; padding: 8px; border-radius: 8px; margin-bottom: 6px; }
+      .linha input { flex: 1 1 220px; padding: 6px; }
+      textarea { width: 100%; height: 240px; font-family: monospace; }
+      button { padding: 8px 14px; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <h1>Marcar sensores no marcador</h1>
+    <ol>
+      <li>Escolha <strong>a mesma imagem</strong> que você usou no compilador do MindAR.</li>
+      <li>Clique em cima de cada sensor na imagem. Aparece um círculo numerado.</li>
+      <li>Escreva o nome e a descrição de cada um na lista abaixo.</li>
+      <li>Clique em <strong>Gerar</strong> e cole o resultado no arquivo <code>js/sensores.js</code>.</li>
+    </ol>
+
+    <input type="file" id="arquivo" accept="image/*" />
+
+    <div id="area"><img id="imagem" alt="" /></div>
+
+    <h2>Sensores marcados</h2>
+    <div id="lista"></div>
+    <datalist id="sugestoes">
+      <option value="Sensor indutivo"></option>
+      <option value="Sensor capacitivo"></option>
+      <option value="Sensor de distância"></option>
+    </datalist>
+
+    <p><button id="gerar" type="button">Gerar e copiar</button></p>
+    <textarea id="saida" readonly></textarea>
+
+    <script>
+      const arquivo = document.getElementById('arquivo')
+      const imagem = document.getElementById('imagem')
+      const area = document.getElementById('area')
+      const lista = document.getElementById('lista')
+      const saida = document.getElementById('saida')
+
+      const SUGESTOES = {
+        'Sensor indutivo': 'Detecta peças metálicas',
+        'Sensor capacitivo': 'Detecta peças não metálicas',
+        'Sensor de distância': 'Mede a distância até o nível do reservatório',
+      }
+
+      let sensores = []
+
+      arquivo.addEventListener('change', () => {
+        const f = arquivo.files[0]
+        if (!f) return
+        imagem.src = URL.createObjectURL(f)
+        sensores = []
+        desenhar()
+      })
+
+      imagem.addEventListener('click', (e) => {
+        const r = imagem.getBoundingClientRect()
+        sensores.push({
+          nome: '',
+          descricao: '',
+          x: (e.clientX - r.left) / r.width,
+          y: (e.clientY - r.top) / r.height,
+        })
+        desenhar()
+      })
+
+      function desenhar() {
+        area.querySelectorAll('.pino').forEach((p) => p.remove())
+        lista.innerHTML = ''
+
+        sensores.forEach((s, i) => {
+          const pino = document.createElement('div')
+          pino.className = 'pino'
+          pino.textContent = i + 1
+          pino.style.left = s.x * 100 + '%'
+          pino.style.top = s.y * 100 + '%'
+          area.appendChild(pino)
+
+          const linha = document.createElement('div')
+          linha.className = 'linha'
+
+          const numero = document.createElement('strong')
+          numero.textContent = i + 1 + '.'
+
+          const descricao = document.createElement('input')
+          descricao.placeholder = 'Descrição (opcional)'
+          descricao.value = s.descricao
+          descricao.addEventListener('input', () => { s.descricao = descricao.value })
+
+          const nome = document.createElement('input')
+          nome.placeholder = 'Nome do sensor'
+          nome.value = s.nome
+          nome.setAttribute('list', 'sugestoes')
+          nome.addEventListener('input', () => {
+            s.nome = nome.value
+            if (!s.descricao && SUGESTOES[s.nome]) {
+              s.descricao = SUGESTOES[s.nome]
+              descricao.value = s.descricao
+            }
+          })
+
+          const remover = document.createElement('button')
+          remover.type = 'button'
+          remover.textContent = 'Remover'
+          remover.addEventListener('click', () => {
+            sensores.splice(i, 1)
+            desenhar()
+          })
+
+          linha.append(numero, nome, descricao, remover)
+          lista.appendChild(linha)
+        })
+      }
+
+      document.getElementById('gerar').addEventListener('click', () => {
+        if (!imagem.naturalWidth) {
+          alert('Escolha a imagem primeiro.')
+          return
+        }
+        const dados = {
+          proporcao: Number((imagem.naturalHeight / imagem.naturalWidth).toFixed(4)),
+          sensores: sensores.map((s, i) => ({
+            id: 'sensor-' + (i + 1),
+            nome: s.nome.trim() || 'Sensor ' + (i + 1),
+            descricao: s.descricao.trim(),
+            x: Number(s.x.toFixed(4)),
+            y: Number(s.y.toFixed(4)),
+          })),
+        }
+        saida.value = 'window.CONFIG_SENSORES = ' + JSON.stringify(dados, null, 2) + '\n'
+        saida.select()
+        document.execCommand('copy')
+      })
+    </script>
+  </body>
+</html>

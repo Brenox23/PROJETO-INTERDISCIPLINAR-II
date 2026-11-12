@@ -6,6 +6,10 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
+.oculto {
+  display: none !important;
+}
+
 #status {
   position: fixed;
   top: 12px;
@@ -19,8 +23,91 @@ body {
   color: #ffffff;
   background: rgba(17, 24, 39, 0.85);
   pointer-events: none;
+  white-space: nowrap;
 }
 
 #status.reconhecido {
   background: rgba(22, 163, 74, 0.92);
+}
+
+#botao-voz {
+  position: fixed;
+  top: 58px;
+  right: 12px;
+  z-index: 10;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.85);
+  cursor: pointer;
+}
+
+/* Mira no centro da tela */
+#mira {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+#mira::before,
+#mira::after {
+  content: '';
+  position: absolute;
+  background: #ffffff;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+}
+
+#mira::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+#mira::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+/* Painel com o nome do sensor */
+#painel-sensor {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+  z-index: 10;
+  padding: 12px 16px;
+  border-left: 6px solid #f59e0b;
+  border-radius: 14px;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.92);
+  pointer-events: none;
+}
+
+#painel-sensor h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+#painel-sensor p {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  color: #d1d5db;
 }
