@@ -111,3 +111,78 @@ body {
   font-size: 0.95rem;
   color: #d1d5db;
 }
+/* Painel com os dados em tempo real da API */
+#painel-dados {
+  --cor-alerta: #22c55e;
+  position: fixed;
+  top: 58px;
+  left: 12px;
+  width: min(220px, calc(100vw - 150px));
+  z-index: 10;
+  padding: 10px 14px;
+  border-left: 6px solid var(--cor-alerta);
+  border-radius: 14px;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.92);
+  pointer-events: none;
+  font-size: 0.9rem;
+}
+
+#painel-dados[data-alerta='ATENCAO'] {
+  --cor-alerta: #f59e0b;
+}
+
+#painel-dados[data-alerta='CRITICO'] {
+  --cor-alerta: #ef4444;
+  animation: pulsar-alerta 1s ease-in-out infinite;
+}
+
+@keyframes pulsar-alerta {
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.45);
+  }
+}
+
+.dados-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.dados-rotulo {
+  color: #d1d5db;
+}
+
+.dados-reservatorio {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dados-trilho {
+  height: 8px;
+  margin: 4px 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+#dado-barra {
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--cor-alerta);
+  transition: width 0.4s ease;
+}
+
+#dado-alerta {
+  font-weight: 700;
+  color: var(--cor-alerta);
+}
+
+#dado-aviso {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: #fca5a5;
+}
