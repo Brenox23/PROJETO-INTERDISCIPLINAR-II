@@ -34,7 +34,12 @@ public class AlertaService {
     @Transactional
     public Optional<Alerta> avaliarEGerar(Leitura leitura) {
         NivelAlerta nivel = leitura.avaliarAlerta();
+
         if (!nivel.exigeAtencao()) {
+            // Reservatório voltou ao normal: encerra os alertas de nível que estavam abertos.
+            if (leitura instanceof LeituraNivel) {
+                resolverAlertasDeNivelAbertos(leitura.getEsteira().getId());
+            }
             return Optional.empty();
         }
 
@@ -70,5 +75,10 @@ public class AlertaService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Alerta", id));
         alerta.resolver();
         return AlertaResponse.de(alerta);
+    }
+
+    private void resolverAlertasDeNivelAbertos(Long esteiraId) {
+        alertaRepository.buscarAlertasDeNivelAbertos(esteiraId)
+                .forEach(Alerta::resolver);
     }
 }
