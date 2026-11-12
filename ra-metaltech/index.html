@@ -18,6 +18,31 @@
 
     <div id="mira" class="oculto"></div>
 
+    <!-- Dados em tempo real vindos da API (contagem e reservatório) -->
+    <div id="painel-dados" class="oculto" data-alerta="NORMAL">
+      <div class="dados-linha">
+        <span class="dados-rotulo">Metálicas</span>
+        <strong id="dado-metalicas">–</strong>
+      </div>
+      <div class="dados-linha">
+        <span class="dados-rotulo">Não metálicas</span>
+        <strong id="dado-nao-metalicas">–</strong>
+      </div>
+      <div class="dados-linha">
+        <span class="dados-rotulo">Total</span>
+        <strong id="dado-total">–</strong>
+      </div>
+      <div class="dados-reservatorio">
+        <div class="dados-linha">
+          <span class="dados-rotulo">Reservatório</span>
+          <strong id="dado-nivel">–</strong>
+        </div>
+        <div class="dados-trilho"><div id="dado-barra"></div></div>
+        <span id="dado-alerta"></span>
+      </div>
+      <p id="dado-aviso" class="oculto"></p>
+    </div>
+
     <div id="painel-sensor" class="oculto">
       <h2 id="painel-nome"></h2>
       <p id="painel-descricao"></p>
@@ -38,5 +63,7 @@
 
     <script src="js/sensores.js"></script>
     <script src="js/app.js" defer></script>
+    <script src="js/config-api.js"></script>
+    <script src="js/dados-api.js" defer></script>
   </body>
 </html>
