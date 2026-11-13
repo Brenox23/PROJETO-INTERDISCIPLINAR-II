@@ -1,0 +1,57 @@
+# Infraestrutura da plataforma MetalTech em containers:
+#   banco -> MySQL 8 com volume persistente
+#   api   -> back-end Spring Boot (imagem gerada pelo back/Dockerfile)
+#
+# Uso:
+#   1. Copie .env.example para .env e defina as senhas
+#   2. docker compose up -d --build
+#   3. Swagger em http://localhost:8080/swagger-ui.html
+
+services:
+  banco:
+    image: mysql:8.0
+    container_name: metaltech-banco
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: metaltech
+      MYSQL_USER: metaltech
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Defina DB_ROOT_PASSWORD no arquivo .env}
+      TZ: America/Sao_Paulo
+    volumes:
+      - dados-mysql:/var/lib/mysql
+    # Sem "ports": o banco só é acessível pela rede interna dos containers
+    networks:
+      - rede-interna
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./back
+    image: metaltech-api
+    container_name: metaltech-api
+    restart: unless-stopped
+    depends_on:
+      banco:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://banco:3306/metaltech?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DB_USERNAME: metaltech
+      DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_SENHA: ${ADMIN_SENHA:?Defina ADMIN_SENHA no arquivo .env}
+      ESTEIRA_SENHA: ${ESTEIRA_SENHA:?Defina ESTEIRA_SENHA no arquivo .env}
+      TZ: America/Sao_Paulo
+    ports:
+      - "8080:8080"
+    networks:
+      - rede-interna
+
+volumes:
+  dados-mysql:
+
+networks:
+  rede-interna:

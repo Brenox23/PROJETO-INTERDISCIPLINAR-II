@@ -7,20 +7,26 @@ import com.metaltech.monitoramento.repository.EsteiraRepository;
 import com.metaltech.monitoramento.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * Cria os dados mínimos para desenvolvimento (somente no perfil dev):
+ * Cria os dados mínimos para o sistema funcionar (em dev e em produção):
  * - 1 esteira de triagem
- * - usuário ADMIN:    admin@metaltech.com   / admin123
- * - usuário OPERADOR: esteira@metaltech.com / esteira123 (usado pela automação)
+ * - usuário ADMIN:    admin@metaltech.com
+ * - usuário OPERADOR: esteira@metaltech.com (usado pela automação)
+ *
+ * As senhas vêm das propriedades app.seed.admin-senha e app.seed.esteira-senha:
+ * - dev: valores fixos de teste (application-dev.properties)
+ * - prod: variáveis de ambiente ADMIN_SENHA e ESTEIRA_SENHA (nunca no código)
  * Só cria o que ainda não existe, então pode reiniciar a API à vontade.
+ * Não roda nos testes automatizados, que criam os próprios dados.
  */
 @Component
-@Profile("dev")
+@Profile("!test")
 public class DadosIniciais implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DadosIniciais.class);
@@ -28,13 +34,19 @@ public class DadosIniciais implements CommandLineRunner {
     private final EsteiraRepository esteiraRepository;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final String senhaAdmin;
+    private final String senhaEsteira;
 
     public DadosIniciais(EsteiraRepository esteiraRepository,
                          UsuarioRepository usuarioRepository,
-                         PasswordEncoder passwordEncoder) {
+                         PasswordEncoder passwordEncoder,
+                         @Value("${app.seed.admin-senha}") String senhaAdmin,
+                         @Value("${app.seed.esteira-senha}") String senhaEsteira) {
         this.esteiraRepository = esteiraRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.senhaAdmin = senhaAdmin;
+        this.senhaEsteira = senhaEsteira;
     }
 
     @Override
@@ -45,8 +57,8 @@ public class DadosIniciais implements CommandLineRunner {
             log.info("Esteira inicial criada.");
         }
 
-        criarUsuarioSeNaoExistir("Administrador", "admin@metaltech.com", "admin123", Perfil.ADMIN);
-        criarUsuarioSeNaoExistir("Esteira de Triagem", "esteira@metaltech.com", "esteira123", Perfil.OPERADOR);
+        criarUsuarioSeNaoExistir("Administrador", "admin@metaltech.com", senhaAdmin, Perfil.ADMIN);
+        criarUsuarioSeNaoExistir("Esteira de Triagem", "esteira@metaltech.com", senhaEsteira, Perfil.OPERADOR);
     }
 
     private void criarUsuarioSeNaoExistir(String nome, String email, String senha, Perfil perfil) {
