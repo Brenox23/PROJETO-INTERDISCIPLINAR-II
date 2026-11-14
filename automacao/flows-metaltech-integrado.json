@@ -1,332 +1,326 @@
 [
-  {
-    "id": "8312e36905c62038",
-    "type": "tab",
-    "label": "Flow 1",
-    "disabled": false,
-    "info": "",
-    "env": []
-  },
-  {
-    "id": "a03c1021fe64b74f",
-    "type": "tab",
-    "label": "Automacao IO-Link",
-    "disabled": false,
-    "info": "Leitura e controle de passagem das tres portas do IO-Link Master IFM"
-  },
-  {
-    "id": "43cd581a0548ce79",
-    "type": "inject",
-    "z": "a03c1021fe64b74f",
-    "name": "Ler sensores a cada segundo",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "1",
-    "once": false,
-    "onceDelay": 0.1,
-    "topic": "",
-    "payload": "",
-    "payloadType": "date",
-    "x": 180,
-    "y": 160,
-    "wires": [
-      [
-        "c4bb399fe663b3af"
-      ]
-    ]
-  },
-  {
-    "id": "c4bb399fe663b3af",
-    "type": "function",
-    "z": "a03c1021fe64b74f",
-    "name": "Preparar consultas",
-    "func": "const sensores = [\n    { porta: 1, nome: 'O5D150 - Distancia' },\n    { porta: 2, nome: 'KI5309 - Capacitivo' },\n    { porta: 3, nome: 'IF6123 - Indutivo' }\n];\n\nconst idCiclo = Date.now().toString();\n\nreturn [sensores.map((sensor, index) => {\n\n    return {\n        porta: sensor.porta,\n        sensor: sensor.nome,\n        topic: String(sensor.porta),\n        parts: {\n            id: idCiclo,\n            index: index,\n            count: sensores.length,\n            type: 'array'\n        },\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        payload: {\n            code: 10,\n            cid: Date.now() + index,\n            adr: '/iolinkmaster/port[' + sensor.porta + ']/iolinkdevice/pdin/getdata'\n        }\n    };\n\n})];",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 430,
-    "y": 160,
-    "wires": [
-      [
-        "b7bfffea8a77833c"
-      ]
-    ]
-  },
-  {
-    "id": "b7bfffea8a77833c",
-    "type": "http request",
-    "z": "a03c1021fe64b74f",
-    "name": "Consultar IO-Link Master",
-    "method": "POST",
-    "ret": "obj",
-    "paytoqs": "ignore",
-    "url": "http://10.110.12.41/",
-    "tls": "",
-    "persist": false,
-    "proxy": "",
-    "insecureHTTPParser": false,
-    "authType": "",
-    "senderr": true,
-    "x": 700,
-    "y": 160,
-    "wires": [
-      [
-        "7680cb1bde202578"
-      ]
-    ]
-  },
-  {
-    "id": "7680cb1bde202578",
-    "type": "function",
-    "z": "a03c1021fe64b74f",
-    "name": "Organizar dados",
-    "func": "const resposta = msg.payload || {};\n\nconst valor = resposta.data && resposta.data.value !== undefined\n    ? resposta.data.value\n    : null;\n\nlet distanciaCm = null;\nlet detectionLevel = null;\nlet sensorOutput = null;\nlet pdv1 = null;\nlet ssc1 = null;\nlet ssc2 = null;\n\nlet status = \"Sem informação\";\n\nif (resposta.code === 530 && msg.porta === 1) {\n    status = \"Sem objeto detectado\";\n}\nelse if (resposta.code === 200 && valor !== null) {\n\n    const hexadecimal = parseInt(valor, 16);\n\n    if (!Number.isNaN(hexadecimal)) {\n\n        if (msg.porta === 1) {\n            distanciaCm = (hexadecimal >> 4) & 0x0FFF;\n            status = \"Objeto detectado\";\n        }\n        else if (msg.porta === 2) {\n            detectionLevel = (hexadecimal >> 8) & 0xFF;\n            sensorOutput = hexadecimal & 0x01;\n            status = sensorOutput === 1 ? \"Saída ativa\" : \"Saída inativa\";\n        }\n        else if (msg.porta === 3) {\n            ssc1 = hexadecimal & 0x01;\n            ssc2 = (hexadecimal >> 1) & 0x01;\n            pdv1 = (hexadecimal >> 2) & 0x3FFF;\n\n            if (pdv1 & 0x2000) {\n                pdv1 -= 0x4000;\n            }\n\n            status = \"Leitura recebida\";\n        }\n\n    } else {\n        status = \"Leitura inválida\";\n    }\n\n} else {\n    status = \"Erro na leitura\";\n}\n\nmsg.payload = {\n    horario: new Date().toLocaleString('pt-BR'),\n    porta: msg.porta,\n    sensor: msg.sensor,\n    status: status,\n    distancia_cm: distanciaCm,\n    detection_level: detectionLevel,\n    sensor_output: sensorOutput,\n    pdv1: pdv1,\n    ssc1: ssc1,\n    ssc2: ssc2,\n    valor_hexadecimal: valor,\n    codigo_resposta: resposta.code !== undefined ? resposta.code : null,\n    resposta_completa: resposta\n};\n\nreturn msg;",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 930,
-    "y": 160,
-    "wires": [
-      [
-        "ef2b37e239eaaf7a"
-      ]
-    ]
-  },
-  {
-    "id": "ef2b37e239eaaf7a",
-    "type": "join",
-    "z": "a03c1021fe64b74f",
-    "name": "Juntar leituras dos tres sensores",
-    "mode": "auto",
-    "build": "array",
-    "property": "payload",
-    "propertyType": "msg",
-    "key": "topic",
-    "joiner": "\\n",
-    "joinerType": "str",
-    "useparts": true,
-    "accumulate": false,
-    "timeout": "",
-    "count": "",
-    "reduceRight": false,
-    "reduceExp": "",
-    "reduceInit": "",
-    "reduceInitType": "",
-    "reduceFixup": "",
-    "x": 1210,
-    "y": 160,
-    "wires": [
-      [
-        "4849fe7c040023e7"
-      ]
-    ]
-  },
-  {
-    "id": "4849fe7c040023e7",
-    "type": "function",
-    "z": "a03c1021fe64b74f",
-    "name": "Classificar material",
-    "func": "const sensores = msg.payload;\n\nif (!Array.isArray(sensores) || sensores.length !== 3) {\n    msg.payload = {\n        classificacao: \"Inconclusivo\",\n        motivo: \"Não foram recebidas as três leituras.\"\n    };\n    return msg;\n}\n\nconst p1 = sensores.find(s => s.porta === 1);\nconst p2 = sensores.find(s => s.porta === 2);\nconst p3 = sensores.find(s => s.porta === 3);\n\nif (!p1 || !p2 || !p3 ||\n    (p1.codigo_resposta !== 200 && p1.codigo_resposta !== 530) ||\n    p2.codigo_resposta !== 200 ||\n    p3.codigo_resposta !== 200) {\n\n    msg.payload = {\n        classificacao: \"Inconclusivo\",\n        motivo: \"Falha na leitura dos sensores.\"\n    };\n    return msg;\n}\n\nconst semPeca =\n    p1.distancia_cm === null ||\n    (\n        p2.sensor_output === 0 &&\n        p3.pdv1 === 8184 &&\n        p3.ssc1 === 0 &&\n        p3.ssc2 === 0\n    );\n\nconst metal =\n    p3.pdv1 >= 0 &&\n    p3.pdv1 <= 4095 &&\n    p3.ssc1 === 1 &&\n    p3.ssc2 === 1;\n\nconst naoMetal =\n    p2.sensor_output === 1 &&\n    p3.pdv1 === 8184 &&\n    p3.ssc1 === 0 &&\n    p3.ssc2 === 0;\n\nlet classificacao = \"Inconclusivo\";\n\nif (semPeca) {\n    classificacao = \"Nenhuma peça detectada\";\n} else if (metal) {\n    classificacao = \"Peça metálica\";\n} else if (naoMetal) {\n    classificacao = \"Peça não metálica\";\n}\n\nmsg.payload = {\n    horario: p1.horario,\n    classificacao: classificacao,\n    distancia_cm: p1.distancia_cm,\n    capacitivo: {\n        detection_level: p2.detection_level,\n        sensor_output: p2.sensor_output\n    },\n    indutivo: {\n        pdv1: p3.pdv1,\n        ssc1: p3.ssc1,\n        ssc2: p3.ssc2\n    }\n};\n\nreturn msg;",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 1510,
-    "y": 160,
-    "wires": [
-      [
-        "d118f08199982481",
-        "f7c3fc2058f9819d",
-        "a1e0000000000004"
-      ]
-    ]
-  },
-  {
-    "id": "d118f08199982481",
-    "type": "function",
-    "z": "a03c1021fe64b74f",
-    "name": "Controlar passagem de peças",
-    "func": "\nconst leitura = msg.payload;\n\n// Verificar se os dados dos sensores chegaram corretamente\nif (\n    !leitura ||\n    !leitura.capacitivo ||\n    !leitura.indutivo\n) {\n    return null;\n}\n\n// Verificar presença da peça pelo sensor capacitivo\nconst pecaPresente =\n    leitura.capacitivo.sensor_output === 1;\n\n// Verificar se o sensor indutivo detectou metal\nconst metalDetectado =\n    leitura.indutivo.pdv1 >= 0 &&\n    leitura.indutivo.pdv1 <= 4095 &&\n    leitura.indutivo.ssc1 === 1 &&\n    leitura.indutivo.ssc2 === 1;\n\n// Recuperar estado anterior\nlet emPassagem = context.get(\"emPassagem\") || false;\nlet metalVisto = context.get(\"metalVisto\") || false;\nlet leiturasSemPeca = context.get(\"leiturasSemPeca\") || 0;\nlet totalPecas = context.get(\"totalPecas\") || 0;\n\n// Enquanto o capacitivo detectar a peça\nif (pecaPresente) {\n\n    emPassagem = true;\n    leiturasSemPeca = 0;\n\n    // Guardar se o indutivo detectou metal em algum momento\n    if (metalDetectado) {\n        metalVisto = true;\n    }\n\n    context.set(\"emPassagem\", emPassagem);\n    context.set(\"metalVisto\", metalVisto);\n    context.set(\"leiturasSemPeca\", leiturasSemPeca);\n\n    // Ainda não apresentar classificação\n    return null;\n}\n\n// Se não houver peça, contar leituras consecutivas sem detecção\nif (emPassagem) {\n\n    leiturasSemPeca++;\n\n    context.set(\"leiturasSemPeca\", leiturasSemPeca);\n\n    // Esperar duas leituras sem peça para encerrar a passagem\n    if (leiturasSemPeca < 2) {\n        return null;\n    }\n\n    // Classificação final\n    const classificacao = metalVisto\n        ? \"Peça metálica\"\n        : \"Peça não metálica\";\n\n    totalPecas++;\n\n    // Liberar para a próxima peça\n    context.set(\"emPassagem\", false);\n    context.set(\"metalVisto\", false);\n    context.set(\"leiturasSemPeca\", 0);\n    context.set(\"totalPecas\", totalPecas);\n\n    msg.payload = {\n        evento: \"Passagem finalizada\",\n        numero_sequencial: totalPecas,\n        horario: leitura.horario,\n        classificacao: classificacao,\n        distancia_cm: leitura.distancia_cm,\n        capacitivo: leitura.capacitivo,\n        indutivo: leitura.indutivo\n    };\n\n    return msg;\n}\n\nreturn null;\n",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 1790,
-    "y": 160,
-    "wires": [
-      [
-        "e139254b5a8d9804",
-        "a1e0000000000001"
-      ]
-    ]
-  },
-  {
-    "id": "e139254b5a8d9804",
-    "type": "debug",
-    "z": "a03c1021fe64b74f",
-    "name": "Peças registradas",
-    "active": true,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": false,
-    "complete": "payload",
-    "targetType": "msg",
-    "statusVal": "",
-    "statusType": "auto",
-    "x": 2070,
-    "y": 160,
-    "wires": []
-  },
-  {
-    "id": "f7c3fc2058f9819d",
-    "type": "debug",
-    "z": "a03c1021fe64b74f",
-    "name": "debug 1",
-    "active": true,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": false,
-    "complete": "payload",
-    "targetType": "msg",
-    "statusVal": "",
-    "statusType": "auto",
-    "x": 1940,
-    "y": 280,
-    "wires": []
-  },
-  {
-    "id": "a1e0000000000001",
-    "type": "function",
-    "z": "a03c1021fe64b74f",
-    "name": "Montar leitura de peça (API)",
-    "func": "// ================= CONFIGURAÇÃO DA API =================\n// Troque pelo IP do PC onde o back-end está rodando (comando ipconfig)\n// Ex.: 'http://192.168.0.15:8080'. Na nuvem: o endereço HTTPS da API.\nconst API_URL = 'http://localhost:8080';\nconst ESTEIRA_ID = 1;\nconst USUARIO = 'esteira@metaltech.com';\nconst SENHA = 'esteira123';\n// ========================================================\n\n// Recebe a peça finalizada do nó \"Controlar passagem de peças\"\n// e monta o POST /api/leituras/pecas no formato da API.\nconst dados = msg.payload || {};\nlet sensorIndutivo;\nlet sensorCapacitivo;\n\nif (dados.classificacao === 'Peça metálica') {\n    sensorIndutivo = true;     // indutivo detectou metal\n    sensorCapacitivo = true;   // capacitivo detecta qualquer material\n} else if (dados.classificacao === 'Peça não metálica') {\n    sensorIndutivo = false;\n    sensorCapacitivo = true;\n} else {\n    return null; // nada a enviar\n}\n\nmsg.method = 'POST';\nmsg.url = API_URL + '/api/leituras/pecas';\nmsg.headers = {\n    'Content-Type': 'application/json',\n    'Authorization': 'Basic ' + Buffer.from(USUARIO + ':' + SENHA).toString('base64')\n};\nmsg.payload = {\n    esteiraId: ESTEIRA_ID,\n    sensorIndutivo: sensorIndutivo,\n    sensorCapacitivo: sensorCapacitivo\n};\nnode.status({ fill: 'green', shape: 'dot', text: dados.classificacao + ' #' + dados.numero_sequencial });\nreturn msg;\n",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 2070,
-    "y": 240,
-    "wires": [
-      [
-        "a1e0000000000002"
-      ]
-    ]
-  },
-  {
-    "id": "a1e0000000000002",
-    "type": "http request",
-    "z": "a03c1021fe64b74f",
-    "name": "POST /api/leituras/pecas",
-    "method": "use",
-    "ret": "obj",
-    "paytoqs": "ignore",
-    "url": "",
-    "tls": "",
-    "persist": false,
-    "proxy": "",
-    "insecureHTTPParser": false,
-    "authType": "",
-    "senderr": false,
-    "headers": [],
-    "x": 2340,
-    "y": 240,
-    "wires": [
-      [
-        "a1e0000000000003"
-      ]
-    ]
-  },
-  {
-    "id": "a1e0000000000003",
-    "type": "debug",
-    "z": "a03c1021fe64b74f",
-    "name": "Resposta API (peça)",
-    "active": true,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": true,
-    "complete": "statusCode",
-    "targetType": "msg",
-    "statusVal": "statusCode",
-    "statusType": "msg",
-    "x": 2590,
-    "y": 240,
-    "wires": []
-  },
-  {
-    "id": "a1e0000000000004",
-    "type": "function",
-    "z": "a03c1021fe64b74f",
-    "name": "Montar leitura de nível (API)",
-    "func": "// ================= CONFIGURAÇÃO DA API =================\n// Troque pelo IP do PC onde o back-end está rodando (comando ipconfig)\n// Ex.: 'http://192.168.0.15:8080'. Na nuvem: o endereço HTTPS da API.\nconst API_URL = 'http://localhost:8080';\nconst ESTEIRA_ID = 1;\nconst USUARIO = 'esteira@metaltech.com';\nconst SENHA = 'esteira123';\n// ========================================================\n\n// Envia o nível do reservatório (sensor de distância O5D150) para\n// POST /api/leituras/niveis, no máximo a cada INTERVALO_MS.\nconst INTERVALO_MS = 5000;\n// O valor do sensor vem em \"distancia_cm\". Se, ao conferir com uma régua,\n// o valor estiver em milímetros, troque para 0.1.\nconst FATOR_PARA_CM = 1;\n\nconst dados = msg.payload || {};\nif (dados.distancia_cm === null || dados.distancia_cm === undefined) {\n    return null; // sem objeto detectado ou falha de leitura\n}\n\nconst agora = Date.now();\nconst ultimoEnvio = context.get('ultimoEnvio') || 0;\nif (agora - ultimoEnvio < INTERVALO_MS) {\n    return null;\n}\ncontext.set('ultimoEnvio', agora);\n\nconst distanciaCm = Math.round(dados.distancia_cm * FATOR_PARA_CM * 10) / 10;\n\nmsg.method = 'POST';\nmsg.url = API_URL + '/api/leituras/niveis';\nmsg.headers = {\n    'Content-Type': 'application/json',\n    'Authorization': 'Basic ' + Buffer.from(USUARIO + ':' + SENHA).toString('base64')\n};\nmsg.payload = {\n    esteiraId: ESTEIRA_ID,\n    distanciaCm: distanciaCm\n};\nnode.status({ fill: 'blue', shape: 'dot', text: distanciaCm + ' cm' });\nreturn msg;\n",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 1790,
-    "y": 400,
-    "wires": [
-      [
-        "a1e0000000000005"
-      ]
-    ]
-  },
-  {
-    "id": "a1e0000000000005",
-    "type": "http request",
-    "z": "a03c1021fe64b74f",
-    "name": "POST /api/leituras/niveis",
-    "method": "use",
-    "ret": "obj",
-    "paytoqs": "ignore",
-    "url": "",
-    "tls": "",
-    "persist": false,
-    "proxy": "",
-    "insecureHTTPParser": false,
-    "authType": "",
-    "senderr": false,
-    "headers": [],
-    "x": 2070,
-    "y": 400,
-    "wires": [
-      [
-        "a1e0000000000006"
-      ]
-    ]
-  },
-  {
-    "id": "a1e0000000000006",
-    "type": "debug",
-    "z": "a03c1021fe64b74f",
-    "name": "Resposta API (nível)",
-    "active": true,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": true,
-    "complete": "statusCode",
-    "targetType": "msg",
-    "statusVal": "statusCode",
-    "statusType": "msg",
-    "x": 2330,
-    "y": 400,
-    "wires": []
-  }
+    {
+        "id": "a03c1021fe64b74f",
+        "type": "tab",
+        "label": "Automacao IO-Link",
+        "disabled": false,
+        "info": "Leitura e controle de passagem das tres portas do IO-Link Master IFM"
+    },
+    {
+        "id": "43cd581a0548ce79",
+        "type": "inject",
+        "z": "a03c1021fe64b74f",
+        "name": "Ler sensores a cada segundo",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "0.1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 160,
+        "wires": [
+            [
+                "c4bb399fe663b3af"
+            ]
+        ]
+    },
+    {
+        "id": "c4bb399fe663b3af",
+        "type": "function",
+        "z": "a03c1021fe64b74f",
+        "name": "Preparar consultas",
+        "func": "const sensores = [\n    { porta: 1, nome: 'O5D150 - Distancia' },\n    { porta: 2, nome: 'KI5309 - Capacitivo' },\n    { porta: 3, nome: 'IF6123 - Indutivo' }\n];\n\nconst idCiclo = Date.now().toString();\n\nreturn [sensores.map((sensor, index) => {\n\n    return {\n        porta: sensor.porta,\n        sensor: sensor.nome,\n        topic: String(sensor.porta),\n        parts: {\n            id: idCiclo,\n            index: index,\n            count: sensores.length,\n            type: 'array'\n        },\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        payload: {\n            code: 10,\n            cid: Date.now() + index,\n            adr: '/iolinkmaster/port[' + sensor.porta + ']/iolinkdevice/pdin/getdata'\n        }\n    };\n\n})];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 160,
+        "wires": [
+            [
+                "b7bfffea8a77833c"
+            ]
+        ]
+    },
+    {
+        "id": "b7bfffea8a77833c",
+        "type": "http request",
+        "z": "a03c1021fe64b74f",
+        "name": "Consultar IO-Link Master",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://10.110.12.41/",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": true,
+        "headers": [],
+        "x": 700,
+        "y": 160,
+        "wires": [
+            [
+                "7680cb1bde202578"
+            ]
+        ]
+    },
+    {
+        "id": "7680cb1bde202578",
+        "type": "function",
+        "z": "a03c1021fe64b74f",
+        "name": "Organizar dados",
+        "func": "const resposta = msg.payload || {};\n\nconst valor = resposta.data && resposta.data.value !== undefined\n    ? resposta.data.value\n    : null;\n\nlet distanciaCm = null;\nlet detectionLevel = null;\nlet sensorOutput = null;\nlet pdv1 = null;\nlet ssc1 = null;\nlet ssc2 = null;\n\nlet status = \"Sem informação\";\n\nif (resposta.code === 530 && msg.porta === 1) {\n    status = \"Sem objeto detectado\";\n}\nelse if (resposta.code === 200 && valor !== null) {\n\n    const hexadecimal = parseInt(valor, 16);\n\n    if (!Number.isNaN(hexadecimal)) {\n\n        if (msg.porta === 1) {\n            distanciaCm = (hexadecimal >> 4) & 0x0FFF;\n            status = \"Objeto detectado\";\n        }\n        else if (msg.porta === 2) {\n            detectionLevel = (hexadecimal >> 8) & 0xFF;\n            sensorOutput = hexadecimal & 0x01;\n            status = sensorOutput === 1 ? \"Saída ativa\" : \"Saída inativa\";\n        }\n        else if (msg.porta === 3) {\n            ssc1 = hexadecimal & 0x01;\n            ssc2 = (hexadecimal >> 1) & 0x01;\n            pdv1 = (hexadecimal >> 2) & 0x3FFF;\n\n            if (pdv1 & 0x2000) {\n                pdv1 -= 0x4000;\n            }\n\n            status = \"Leitura recebida\";\n        }\n\n    } else {\n        status = \"Leitura inválida\";\n    }\n\n} else {\n    status = \"Erro na leitura\";\n}\n\nmsg.payload = {\n    horario: new Date().toLocaleString('pt-BR'),\n    porta: msg.porta,\n    sensor: msg.sensor,\n    status: status,\n    distancia_cm: distanciaCm,\n    detection_level: detectionLevel,\n    sensor_output: sensorOutput,\n    pdv1: pdv1,\n    ssc1: ssc1,\n    ssc2: ssc2,\n    valor_hexadecimal: valor,\n    codigo_resposta: resposta.code !== undefined ? resposta.code : null,\n    resposta_completa: resposta\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 160,
+        "wires": [
+            [
+                "ef2b37e239eaaf7a"
+            ]
+        ]
+    },
+    {
+        "id": "ef2b37e239eaaf7a",
+        "type": "join",
+        "z": "a03c1021fe64b74f",
+        "name": "Juntar leituras dos tres sensores",
+        "mode": "auto",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": true,
+        "accumulate": false,
+        "timeout": "",
+        "count": "",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 1210,
+        "y": 160,
+        "wires": [
+            [
+                "4849fe7c040023e7"
+            ]
+        ]
+    },
+    {
+        "id": "4849fe7c040023e7",
+        "type": "function",
+        "z": "a03c1021fe64b74f",
+        "name": "Classificar material",
+        "func": "const sensores = msg.payload;\n\nif (!Array.isArray(sensores) || sensores.length !== 3) {\n    msg.payload = {\n        classificacao: \"Inconclusivo\",\n        motivo: \"Não foram recebidas as três leituras.\"\n    };\n    return msg;\n}\n\nconst p1 = sensores.find(s => s.porta === 1);\nconst p2 = sensores.find(s => s.porta === 2);\nconst p3 = sensores.find(s => s.porta === 3);\n\nif (!p1 || !p2 || !p3 ||\n    (p1.codigo_resposta !== 200 && p1.codigo_resposta !== 530) ||\n    p2.codigo_resposta !== 200 ||\n    p3.codigo_resposta !== 200) {\n\n    msg.payload = {\n        classificacao: \"Inconclusivo\",\n        motivo: \"Falha na leitura dos sensores.\"\n    };\n    return msg;\n}\n\nconst semPeca =\n    p1.distancia_cm === null ||\n    (\n        p2.sensor_output === 0 &&\n        p3.pdv1 === 8184 &&\n        p3.ssc1 === 0 &&\n        p3.ssc2 === 0\n    );\n\nconst metal =\n    p3.pdv1 >= 0 &&\n    p3.pdv1 <= 4095 &&\n    p3.ssc1 === 1 &&\n    p3.ssc2 === 1;\n\nconst naoMetal =\n    p2.sensor_output === 1 &&\n    p3.pdv1 === 8184 &&\n    p3.ssc1 === 0 &&\n    p3.ssc2 === 0;\n\nlet classificacao = \"Inconclusivo\";\n\nif (semPeca) {\n    classificacao = \"Nenhuma peça detectada\";\n} else if (metal) {\n    classificacao = \"Peça metálica\";\n} else if (naoMetal) {\n    classificacao = \"Peça não metálica\";\n}\n\nmsg.payload = {\n    horario: p1.horario,\n    classificacao: classificacao,\n    distancia_cm: p1.distancia_cm,\n    capacitivo: {\n        detection_level: p2.detection_level,\n        sensor_output: p2.sensor_output\n    },\n    indutivo: {\n        pdv1: p3.pdv1,\n        ssc1: p3.ssc1,\n        ssc2: p3.ssc2\n    }\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1510,
+        "y": 160,
+        "wires": [
+            [
+                "d118f08199982481",
+                "f7c3fc2058f9819d",
+                "a1e0000000000004"
+            ]
+        ]
+    },
+    {
+        "id": "d118f08199982481",
+        "type": "function",
+        "z": "a03c1021fe64b74f",
+        "name": "Controlar passagem de peças",
+        "func": "const leitura = msg.payload;\n\n// Quantas leituras seguidas SEM peça para considerar que a peça terminou de passar.\n// Com leitura a cada 0,1 s: 10 leituras = 1 segundo sem detecção.\nconst LEITURAS_PARA_ENCERRAR = 10;\n\n// Valor que o sensor indutivo devolve quando NÃO há metal por perto\nconst INDUTIVO_SEM_METAL = 8184;\n\n// Verificar se os dados dos sensores chegaram corretamente\nif (\n    !leitura ||\n    !leitura.capacitivo ||\n    !leitura.indutivo\n) {\n    return null;\n}\n\n// Verificar presença da peça pelo sensor capacitivo\nconst pecaPresente =\n    leitura.capacitivo.sensor_output === 1;\n\n// Verificar se o sensor indutivo detectou metal\n// (mais sensível: qualquer saída ligada OU qualquer valor diferente de \"sem metal\")\nconst metalDetectado =\n    leitura.indutivo.ssc1 === 1 ||\n    leitura.indutivo.ssc2 === 1 ||\n    (leitura.indutivo.pdv1 !== null && leitura.indutivo.pdv1 !== INDUTIVO_SEM_METAL);\n\n// Recuperar estado anterior\nlet emPassagem = context.get(\"emPassagem\") || false;\nlet metalVisto = context.get(\"metalVisto\") || false;\nlet leiturasSemPeca = context.get(\"leiturasSemPeca\") || 0;\nlet totalPecas = context.get(\"totalPecas\") || 0;\n\n// Enquanto o capacitivo detectar a peça\nif (pecaPresente) {\n\n    emPassagem = true;\n    leiturasSemPeca = 0;\n\n    // Guardar se o indutivo detectou metal em algum momento\n    if (metalDetectado) {\n        metalVisto = true;\n    }\n\n    context.set(\"emPassagem\", emPassagem);\n    context.set(\"metalVisto\", metalVisto);\n    context.set(\"leiturasSemPeca\", leiturasSemPeca);\n\n    // Ainda não apresentar classificação\n    return null;\n}\n\n// Se não houver peça, contar leituras consecutivas sem detecção\nif (emPassagem) {\n\n    // Continuar olhando o indutivo logo depois que a peça sai do capacitivo\n    // (caso o indutivo esteja posicionado depois do capacitivo na esteira)\n    if (metalDetectado) {\n        metalVisto = true;\n        context.set(\"metalVisto\", metalVisto);\n    }\n\n    leiturasSemPeca++;\n\n    context.set(\"leiturasSemPeca\", leiturasSemPeca);\n\n    // Esperar várias leituras sem peça para encerrar a passagem\n    // (evita que uma \"piscada\" do sensor divida uma peça em duas)\n    if (leiturasSemPeca < LEITURAS_PARA_ENCERRAR) {\n        return null;\n    }\n\n    // Classificação final\n    const classificacao = metalVisto\n        ? \"Peça metálica\"\n        : \"Peça não metálica\";\n\n    totalPecas++;\n\n    // Liberar para a próxima peça\n    context.set(\"emPassagem\", false);\n    context.set(\"metalVisto\", false);\n    context.set(\"leiturasSemPeca\", 0);\n    context.set(\"totalPecas\", totalPecas);\n\n    msg.payload = {\n        evento: \"Passagem finalizada\",\n        numero_sequencial: totalPecas,\n        horario: leitura.horario,\n        classificacao: classificacao,\n        distancia_cm: leitura.distancia_cm,\n        capacitivo: leitura.capacitivo,\n        indutivo: leitura.indutivo\n    };\n\n    return msg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1790,
+        "y": 160,
+        "wires": [
+            [
+                "e139254b5a8d9804",
+                "a1e0000000000001"
+            ]
+        ]
+    },
+    {
+        "id": "e139254b5a8d9804",
+        "type": "debug",
+        "z": "a03c1021fe64b74f",
+        "name": "Peças registradas",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2070,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "f7c3fc2058f9819d",
+        "type": "debug",
+        "z": "a03c1021fe64b74f",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1940,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "a1e0000000000001",
+        "type": "function",
+        "z": "a03c1021fe64b74f",
+        "name": "Montar leitura de peça (API)",
+        "func": "// ================= CONFIGURAÇÃO DA API =================\n// Troque pelo IP do PC onde o back-end está rodando (comando ipconfig)\n// Ex.: 'http://192.168.0.15:8080'. Na nuvem: o endereço HTTPS da API.\nconst API_URL = 'http://localhost:8080';\nconst ESTEIRA_ID = 1;\nconst USUARIO = 'esteira@metaltech.com';\nconst SENHA = 'esteira123';\n// ========================================================\n\n// Recebe a peça finalizada do nó \"Controlar passagem de peças\"\n// e monta o POST /api/leituras/pecas no formato da API.\nconst dados = msg.payload || {};\nlet sensorIndutivo;\nlet sensorCapacitivo;\n\nif (dados.classificacao === 'Peça metálica') {\n    sensorIndutivo = true;     // indutivo detectou metal\n    sensorCapacitivo = true;   // capacitivo detecta qualquer material\n} else if (dados.classificacao === 'Peça não metálica') {\n    sensorIndutivo = false;\n    sensorCapacitivo = true;\n} else {\n    return null; // nada a enviar\n}\n\nmsg.method = 'POST';\nmsg.url = API_URL + '/api/leituras/pecas';\nmsg.headers = {\n    'Content-Type': 'application/json',\n    'Authorization': 'Basic ' + Buffer.from(USUARIO + ':' + SENHA).toString('base64')\n};\nmsg.payload = {\n    esteiraId: ESTEIRA_ID,\n    sensorIndutivo: sensorIndutivo,\n    sensorCapacitivo: sensorCapacitivo\n};\nnode.status({ fill: 'green', shape: 'dot', text: dados.classificacao + ' #' + dados.numero_sequencial });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 280,
+        "wires": [
+            [
+                "a1e0000000000002"
+            ]
+        ]
+    },
+    {
+        "id": "a1e0000000000002",
+        "type": "http request",
+        "z": "a03c1021fe64b74f",
+        "name": "POST /api/leituras/pecas",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 720,
+        "y": 280,
+        "wires": [
+            [
+                "a1e0000000000003"
+            ]
+        ]
+    },
+    {
+        "id": "a1e0000000000003",
+        "type": "debug",
+        "z": "a03c1021fe64b74f",
+        "name": "Resposta API (peça)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "statusCode",
+        "targetType": "msg",
+        "statusVal": "statusCode",
+        "statusType": "msg",
+        "x": 970,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "a1e0000000000004",
+        "type": "function",
+        "z": "a03c1021fe64b74f",
+        "name": "Montar leitura de nível (API)",
+        "func": "// ================= CONFIGURAÇÃO DA API =================\n// Troque pelo IP do PC onde o back-end está rodando (comando ipconfig)\n// Ex.: 'http://192.168.0.15:8080'. Na nuvem: o endereço HTTPS da API.\nconst API_URL = 'http://localhost:8080';\nconst ESTEIRA_ID = 1;\nconst USUARIO = 'esteira@metaltech.com';\nconst SENHA = 'esteira123';\n// ========================================================\n\n// Envia o nível do reservatório (sensor de distância O5D150) para\n// POST /api/leituras/niveis, no máximo a cada INTERVALO_MS.\nconst INTERVALO_MS = 5000;\n// O valor do sensor vem em \"distancia_cm\". Se, ao conferir com uma régua,\n// o valor estiver em milímetros, troque para 0.1.\nconst FATOR_PARA_CM = 1;\n\nconst dados = msg.payload || {};\nif (dados.distancia_cm === null || dados.distancia_cm === undefined) {\n    return null; // sem objeto detectado ou falha de leitura\n}\n\nconst agora = Date.now();\nconst ultimoEnvio = context.get('ultimoEnvio') || 0;\nif (agora - ultimoEnvio < INTERVALO_MS) {\n    return null;\n}\ncontext.set('ultimoEnvio', agora);\n\nconst distanciaCm = Math.round(dados.distancia_cm * FATOR_PARA_CM * 10) / 10;\n\nmsg.method = 'POST';\nmsg.url = API_URL + '/api/leituras/niveis';\nmsg.headers = {\n    'Content-Type': 'application/json',\n    'Authorization': 'Basic ' + Buffer.from(USUARIO + ':' + SENHA).toString('base64')\n};\nmsg.payload = {\n    esteiraId: ESTEIRA_ID,\n    distanciaCm: distanciaCm\n};\nnode.status({ fill: 'blue', shape: 'dot', text: distanciaCm + ' cm' });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 160,
+        "y": 380,
+        "wires": [
+            [
+                "a1e0000000000005"
+            ]
+        ]
+    },
+    {
+        "id": "a1e0000000000005",
+        "type": "http request",
+        "z": "a03c1021fe64b74f",
+        "name": "POST /api/leituras/niveis",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 440,
+        "y": 380,
+        "wires": [
+            [
+                "a1e0000000000006"
+            ]
+        ]
+    },
+    {
+        "id": "a1e0000000000006",
+        "type": "debug",
+        "z": "a03c1021fe64b74f",
+        "name": "Resposta API (nível)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "statusCode",
+        "targetType": "msg",
+        "statusVal": "statusCode",
+        "statusType": "msg",
+        "x": 700,
+        "y": 380,
+        "wires": []
+    }
 ]
