@@ -112,6 +112,12 @@ function Dashboard() {
   const limiteCritico = nivel?.limiteCriticoPercentual ?? esteira.limiteCriticoPercentual
   const anomalias = detectarAnomalias({ contagem, historico })
 
+  // Distância medida pelo sensor no momento em que a última peça foi detectada
+  const distanciaCm =
+    nivel && nivel.distanciaCm !== null && nivel.distanciaCm !== undefined
+      ? Math.round(nivel.distanciaCm * 10) / 10
+      : null
+
   return (
     <>
       <BarraStatus
@@ -123,7 +129,7 @@ function Dashboard() {
 
       {erro && (
         <div className="alert alert-warning" role="alert">
-          {erro} Exibindo os últimos dados recebidos. 
+          {erro} Exibindo os últimos dados recebidos.
         </div>
       )}
 
@@ -142,6 +148,15 @@ function Dashboard() {
         </div>
         <div className="col-12 col-sm-6 col-lg">
           <CartaoIndicador titulo="Peças indefinidas" valor={contagem.indefinidas} cor="warning" icone="❓" />
+        </div>
+        <div className="col-12 col-sm-6 col-lg">
+          <CartaoIndicador
+            titulo="Distância na detecção"
+            valor={distanciaCm !== null ? distanciaCm : '--'}
+            unidade={distanciaCm !== null ? 'cm' : ''}
+            cor="dark"
+            icone="📏"
+          />
         </div>
         <div className="col-12 col-sm-6 col-lg">
           <CartaoIndicador
