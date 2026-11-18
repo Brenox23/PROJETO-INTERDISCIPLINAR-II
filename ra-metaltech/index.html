@@ -1,40 +1,60 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MetalTech RA</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MetalTech RA</title>
 
-    <!-- A-Frame primeiro, depois o MindAR -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <!-- A-Frame e MindAR -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    <link rel="stylesheet" href="css/estilos.css" />
-  </head>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
 
-  <body>
-    <div id="status" class="procurando">Aponte a câmera para o marcador</div>
-    
+<body>
 
-    <div id="mira" class="oculto"></div>
+  <!-- Instrução para o usuário -->
+  <div id="status" class="procurando">
+    Aponte a câmera para a imagem da esteira
+  </div>
 
+  <div id="mira" class="oculto"></div>
 
-    <a-scene
-      mindar-image="imageTargetSrc: ./assets/targets/targets.mind;"
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-    >
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <!-- Painel de informações dos sensores -->
+  <div id="painel-sensor" class="oculto">
+    <h2 id="painel-nome">Sensores da Esteira</h2>
+    <p id="painel-descricao">
+      Aponte para os sensores para visualizar suas identificações.
+    </p>
+  </div>
 
-      <!-- Os círculos dos sensores são criados pelo js/app.js dentro desta entidade -->
-      <a-entity id="alvo-esteira" mindar-image-target="targetIndex: 0"></a-entity>
-    </a-scene>
+  <!-- Cena de Realidade Aumentada -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./assets/targets/targets.mind;"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
 
-    <script src="js/sensores.js"></script>
-    <script src="js/app.js" defer></script>
-    <script src="js/config-api.js"></script>
-    <script src="js/dados-api.js" defer></script>
-  </body>
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
+
+    <!-- Reconhecimento do marcador -->
+    <a-entity
+      id="alvo-esteira"
+      mindar-image-target="targetIndex: 0">
+    </a-entity>
+
+  </a-scene>
+
+  <!-- Scripts dos sensores e da RA -->
+  <script src="js/sensores.js"></script>
+  <script src="js/app.js" defer></script>
+
+</body>
 </html>
